@@ -1,0 +1,36 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.ts text diff=typescript
+*.js text
+*.json text
+*.md text diff=markdown
+*.yml text
+*.yaml text
+*.sh text eol=lf
+*.env text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Lock files
+yarn.lock -diff
+package-lock.json -diff
+
+# Documentation
+*.md diff=markdown
+
+# Git
+.gitattributes export-ignore
+.gitignore export-ignore
+.editorconfig export-ignore
