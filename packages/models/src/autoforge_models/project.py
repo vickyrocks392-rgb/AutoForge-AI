@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import Field
 
-from auto_forge_models.base import AuditableModel
+from autoforge_models.base import AuditableModel
 
 
 class Project(AuditableModel):

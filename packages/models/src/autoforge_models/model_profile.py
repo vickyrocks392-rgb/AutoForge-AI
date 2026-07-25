@@ -12,8 +12,8 @@ from typing import Any
 
 from pydantic import Field
 
-from auto_forge_models.base import TimestampedModel
-from auto_forge_models.enums import ModelProvider
+from autoforge_models.base import TimestampedModel
+from autoforge_models.enums import ModelProvider
 
 
 class ModelProfile(TimestampedModel):

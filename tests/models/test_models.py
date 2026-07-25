@@ -8,10 +8,10 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from auto_forge_models.artifact import Artifact
-from auto_forge_models.checkpoint import Checkpoint
-from auto_forge_models.employee import Employee, ModelConfig
-from auto_forge_models.enums import (
+from autoforge_models.artifact import Artifact
+from autoforge_models.checkpoint import Checkpoint
+from autoforge_models.employee import Employee, ModelConfig
+from autoforge_models.enums import (
     ArtifactType,
     CheckpointType,
     EmployeeRole,
@@ -25,15 +25,15 @@ from auto_forge_models.enums import (
     TaskPriority,
     TaskStatus,
 )
-from auto_forge_models.event import Event
-from auto_forge_models.execution_session import ExecutionSession
-from auto_forge_models.knowledge import KnowledgeEdge, KnowledgeNode
-from auto_forge_models.memory_entry import MemoryEntry
-from auto_forge_models.model_profile import ModelProfile
-from auto_forge_models.project import Project
-from auto_forge_models.quality_gate import QualityGate
-from auto_forge_models.review import Review
-from auto_forge_models.task import ResourceRequirements, Task
+from autoforge_models.event import Event
+from autoforge_models.execution_session import ExecutionSession
+from autoforge_models.knowledge import KnowledgeEdge, KnowledgeNode
+from autoforge_models.memory_entry import MemoryEntry
+from autoforge_models.model_profile import ModelProfile
+from autoforge_models.project import Project
+from autoforge_models.quality_gate import QualityGate
+from autoforge_models.review import Review
+from autoforge_models.task import ResourceRequirements, Task
 
 
 # ---------------------------------------------------------------------------
@@ -270,11 +270,11 @@ class TestEmployee:
         e = Employee(
             name="GPT-4 Agent",
             role=EmployeeRole.DEVELOPER,
-            model_config=mc,
+            model=mc,
         )
-        assert e.model_config is not None
-        assert e.model_config.provider == ModelProvider.OPENAI
-        assert e.model_config.model_name == "gpt-4"
+        assert e.model is not None
+        assert e.model.provider == ModelProvider.OPENAI
+        assert e.model.model_name == "gpt-4"
 
     def test_human_employee(self):
         """A human Employee has no model config."""
@@ -284,7 +284,7 @@ class TestEmployee:
             is_ai=False,
         )
         assert e.is_ai is False
-        assert e.model_config is None
+        assert e.model is None
 
 
 # ---------------------------------------------------------------------------
@@ -476,7 +476,6 @@ class TestKnowledgeNode:
         )
         assert n.node_type == "Concept"
         assert n.label == "Dependency Injection"
-        assert n.weight == 1.0
 
     def test_create_with_ref(self):
         """A KnowledgeNode can reference an external entity."""

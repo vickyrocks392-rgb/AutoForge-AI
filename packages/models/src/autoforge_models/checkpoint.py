@@ -13,8 +13,8 @@ from typing import Any
 
 from pydantic import Field
 
-from auto_forge_models.base import TimestampedModel
-from auto_forge_models.enums import CheckpointType
+from autoforge_models.base import TimestampedModel
+from autoforge_models.enums import CheckpointType
 
 
 class Checkpoint(TimestampedModel):

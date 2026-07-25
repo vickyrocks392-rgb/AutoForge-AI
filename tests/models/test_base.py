@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from auto_forge_models.base import (
+from autoforge_models.base import (
     AutoForgeBaseModel,
     AuditableModel,
     IdentifiedModel,

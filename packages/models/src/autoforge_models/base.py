@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any, ClassVar
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -38,7 +38,7 @@ class AutoForgeBaseModel(BaseModel):
     - Frozen by default (immutable after construction).
     """
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(
+    model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
         frozen=True,

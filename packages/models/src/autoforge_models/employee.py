@@ -12,8 +12,8 @@ from typing import Any
 
 from pydantic import Field
 
-from auto_forge_models.base import AutoForgeBaseModel, TimestampedModel
-from auto_forge_models.enums import EmployeeRole, ModelProvider
+from autoforge_models.base import AutoForgeBaseModel, TimestampedModel
+from autoforge_models.enums import EmployeeRole, ModelProvider
 
 
 class ModelConfig(AutoForgeBaseModel):
@@ -86,7 +86,7 @@ class Employee(TimestampedModel):
         default=True,
         description="Whether this employee is an AI agent (True) or human (False).",
     )
-    model_config: ModelConfig | None = Field(
+    model: ModelConfig | None = Field(
         default=None,
         description="AI model configuration (required for AI employees, null for humans).",
     )

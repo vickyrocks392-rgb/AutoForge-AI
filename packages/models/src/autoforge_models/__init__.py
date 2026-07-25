@@ -6,13 +6,13 @@ for the entire AutoForge AI platform. Every subsystem depends on these models
 as the universal language of the platform.
 """
 
-from auto_forge_models.base import (
+from autoforge_models.base import (
     AutoForgeBaseModel,
     TimestampedModel,
     IdentifiedModel,
     AuditableModel,
 )
-from auto_forge_models.enums import (
+from autoforge_models.enums import (
     ArtifactType,
     CheckpointType,
     EmployeeRole,
@@ -26,18 +26,18 @@ from auto_forge_models.enums import (
     TaskPriority,
     TaskStatus,
 )
-from auto_forge_models.project import Project
-from auto_forge_models.task import Task, ResourceRequirements
-from auto_forge_models.artifact import Artifact
-from auto_forge_models.checkpoint import Checkpoint
-from auto_forge_models.execution_session import ExecutionSession
-from auto_forge_models.employee import Employee, ModelConfig
-from auto_forge_models.review import Review
-from auto_forge_models.event import Event
-from auto_forge_models.model_profile import ModelProfile
-from auto_forge_models.memory_entry import MemoryEntry
-from auto_forge_models.knowledge import KnowledgeNode, KnowledgeEdge
-from auto_forge_models.quality_gate import QualityGate
+from autoforge_models.project import Project
+from autoforge_models.task import Task, ResourceRequirements
+from autoforge_models.artifact import Artifact
+from autoforge_models.checkpoint import Checkpoint
+from autoforge_models.execution_session import ExecutionSession
+from autoforge_models.employee import Employee, ModelConfig
+from autoforge_models.review import Review
+from autoforge_models.event import Event
+from autoforge_models.model_profile import ModelProfile
+from autoforge_models.memory_entry import MemoryEntry
+from autoforge_models.knowledge import KnowledgeNode, KnowledgeEdge
+from autoforge_models.quality_gate import QualityGate
 
 __all__ = [
     # Base

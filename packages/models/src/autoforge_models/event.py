@@ -14,8 +14,8 @@ from typing import Any
 
 from pydantic import Field
 
-from auto_forge_models.base import AutoForgeBaseModel
-from auto_forge_models.enums import EventType
+from autoforge_models.base import AutoForgeBaseModel
+from autoforge_models.enums import EventType
 
 
 class Event(AutoForgeBaseModel):

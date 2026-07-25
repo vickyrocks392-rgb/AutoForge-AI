@@ -2,7 +2,7 @@
 Unit tests for shared enumerations.
 """
 
-from auto_forge_models.enums import (
+from autoforge_models.enums import (
     ArtifactType,
     CheckpointType,
     EmployeeRole,
