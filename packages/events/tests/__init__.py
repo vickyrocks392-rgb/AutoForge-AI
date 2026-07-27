@@ -1,0 +1,1 @@
+"""Tests for the autoforge-events package."""
