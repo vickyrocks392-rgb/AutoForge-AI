@@ -1,12 +1,14 @@
 # Execution Lifecycle
 
+> **Note:** This document describes the execution lifecycle in terms consistent with Architecture v1.0 (`architecture/ARCHITECTURE.md`). The canonical architecture defines the Request Lifecycle as: Idea → Requirement Analysis → Architecture Design → Task Graph Generation → Workflow Construction → Scheduling → Execution → Review → Testing → Deployment → Completion. The Kernel dynamically orchestrates this lifecycle — not every request traverses every stage.
+
 ## Purpose
 
 This document describes the complete end-to-end execution lifecycle of an AutoForge AI project — from the moment a user submits a request to the moment the completed project is delivered. It ties together all components of the execution architecture into a coherent flow.
 
 ## Scope
 
-This document covers the high-level lifecycle stages, the transitions between them, and the components involved at each stage. It does not repeat the detailed design of individual components — those are documented in their respective architecture documents.
+This document covers the high-level lifecycle stages, the transitions between them, and the components involved at each stage. It does not repeat the detailed design of individual components — those are documented in their respective architecture documents. The canonical lifecycle specification is in `architecture/ARCHITECTURE.md` Section 6.
 
 ---
 

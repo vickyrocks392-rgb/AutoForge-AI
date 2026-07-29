@@ -1,12 +1,14 @@
 # Event Bus
 
+> **Note:** This document is consistent with Architecture v1.0 (`architecture/ARCHITECTURE.md`). The Event Bus is a Shared Platform Service that provides the publish-subscribe infrastructure routing events from producers to consumers. It decouples subsystems by enabling asynchronous communication without direct references. The Canonical Event Model defines the schema-enforced, versioned structure that every event must conform to.
+
 ## Purpose
 
-This document defines the event bus — the communication backbone of the AutoForge AI execution architecture. The event bus enables decoupled, asynchronous communication between all components of the execution system, providing a single source of truth for what happened, when, and why.
+This document defines the event bus — the Shared Platform Service that serves as the communication backbone of the AutoForge AI execution architecture. The event bus enables decoupled, asynchronous communication between all components of the execution system, providing a single source of truth for what happened, when, and why.
 
 ## Scope
 
-This document covers the event model, event types, publishing and subscription patterns, and delivery guarantees. It does not cover specific event bus implementations (in-memory, NATS, RabbitMQ, Kafka) — those are deployment decisions.
+This document covers the event model, event types, publishing and subscription patterns, and delivery guarantees. It does not cover specific event bus implementations (in-memory, NATS, RabbitMQ, Kafka) — those are deployment decisions. The canonical specification for the Event Bus and Canonical Event Model is in `architecture/ARCHITECTURE.md` Section 20.
 
 ---
 

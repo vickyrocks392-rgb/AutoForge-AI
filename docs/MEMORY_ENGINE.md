@@ -1,12 +1,14 @@
 # Memory Engine
 
+> **Note:** This document is consistent with Architecture v1.0 (`architecture/ARCHITECTURE.md`). The Memory Engine is a Shared Platform Service that provides contextual storage capturing the state and history of specific executions and sessions. It manages working memory, project memory, long-term memory, reflection memory, and semantic memory.
+
 ## Purpose
 
-This document describes the Memory Engine — the component responsible for managing state, context, and knowledge persistence across the AutoForge AI platform. It provides the data infrastructure that enables workflows to be recoverable, agents to have context, and decisions to be auditable.
+This document describes the Memory Engine — the Shared Platform Service responsible for managing contextual storage, execution history, and knowledge persistence across the AutoForge AI platform. It provides the data infrastructure that enables workflows to be recoverable, workers to have context, and decisions to be auditable.
 
 ## Scope
 
-This document covers the conceptual architecture of the Memory Engine, its storage tiers, data models, and relationship to other platform components. Implementation details are deferred to the `packages/memory` package.
+This document covers the conceptual architecture of the Memory Engine, its memory types, data models, and relationship to other platform components. Implementation details are deferred to the `packages/memory` package. The canonical specification for the Memory Engine is in `architecture/ARCHITECTURE.md` Section 14.
 
 ---
 

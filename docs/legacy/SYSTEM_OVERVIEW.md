@@ -1,13 +1,5 @@
 # System Overview
 
-> **⚠️ SUPERSEDED**
->
-> This document describes a previous version of the AutoForge AI system architecture (service-oriented architecture with apps, services, and packages).
->
-> The canonical architecture specification is now `architecture/ARCHITECTURE.md` (Architecture v1.0), which describes the platform in terms of Kernel, Platform Engines, Shared Platform Services, and Workers.
->
-> This document is preserved in `docs/legacy/SYSTEM_OVERVIEW.md` for historical reference.
-
 ## Purpose
 
 This document provides a high-level overview of the AutoForge AI system architecture, its core components, and how they interact to deliver autonomous software engineering capabilities.

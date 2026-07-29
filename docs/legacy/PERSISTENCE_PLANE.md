@@ -1,11 +1,5 @@
 # Persistence Plane
 
-> **⚠️ SUPERSEDED**
->
-> This document describes a "Persistence Plane" concept that is not part of Architecture v1.0. The canonical architecture (`architecture/ARCHITECTURE.md`) uses Kernel, Platform Engines, and Shared Platform Services instead of a Control Plane/Data Plane/Persistence Plane model.
->
-> This document is preserved in `docs/legacy/PERSISTENCE_PLANE.md` for historical reference.
-
 ## Purpose
 
 The Persistence Plane is the data storage and retrieval layer of the AutoForge AI platform. It is responsible for all durable state — storing, indexing, and retrieving the data that the Control Plane and Data Plane depend on. The Persistence Plane is the "memory" of the platform, ensuring that no data is lost and that every component can access the data it needs.
@@ -103,9 +97,9 @@ The Persistence Plane is the data storage and retrieval layer of the AutoForge A
 │  Control     │◀────────────────▶│ Persistence  │
 │  Plane       │                  │   Plane      │
 └──────────────┘                  └──────────────┘
-                                         ▲
-                                         │ Read/Write
-                                         ▼
+                                        ▲
+                                        │ Read/Write
+                                        ▼
 ┌──────────────┐                  ┌──────────────┐
 │   Data       │◀────────────────▶│              │
 │   Plane      │   Read/Write     │              │

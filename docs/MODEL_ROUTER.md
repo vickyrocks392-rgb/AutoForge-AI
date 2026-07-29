@@ -1,12 +1,14 @@
 # Model Router
 
+> **Note:** This document is consistent with Architecture v1.0 (`architecture/ARCHITECTURE.md`). The Model Router is a Shared Platform Service responsible only for model selection. The Capability Registry (a separate Shared Platform Service) is the authoritative source of AI infrastructure metadata. The Execution Continuity Manager handles retries and failover.
+
 ## Purpose
 
-This document defines the model router — the component responsible for selecting and routing tasks to the appropriate LLM (Large Language Model) provider and model. The model router abstracts the complexity of multi-provider, multi-model LLM access behind a unified interface, enabling the platform to use the best model for each task while managing cost, latency, and availability.
+This document defines the model router — the Shared Platform Service responsible for selecting and routing tasks to the appropriate LLM (Large Language Model) provider and model. The model router abstracts the complexity of multi-provider, multi-model LLM access behind a unified interface, enabling the platform to use the best model for each task while managing cost, latency, and availability.
 
 ## Scope
 
-This document covers model selection strategies, provider abstraction, routing logic, and cost management. It does not cover task execution or agent service implementation — those concerns are addressed in their respective documents.
+This document covers model selection strategies, provider abstraction, routing logic, and cost management. It does not cover task execution, agent service implementation, capability metadata management (handled by the Capability Registry), or execution resilience (handled by the Execution Continuity Manager) — those concerns are addressed in their respective documents.
 
 ---
 

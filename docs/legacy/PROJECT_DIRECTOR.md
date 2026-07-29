@@ -1,13 +1,5 @@
 # Project Director
 
-> **⚠️ SUPERSEDED**
->
-> This document describes a "Project Director" component that is not part of Architecture v1.0. In the canonical architecture (`architecture/ARCHITECTURE.md`), the Kernel is the executive orchestration layer responsible for project intake, execution planning, Platform Engine orchestration, Shared Platform Service orchestration, and lifecycle coordination.
->
-> The Kernel owns orchestration. Every other subsystem owns execution.
->
-> This document is preserved in `docs/legacy/PROJECT_DIRECTOR.md` for historical reference.
-
 ## Purpose
 
 The Project Director is the platform-level orchestration component responsible for monitoring overall project health, detecting drift, managing scope, and coordinating long-running execution. It is NOT an LLM — it is a deterministic orchestration component that observes, analyzes, and acts based on structured data from the execution system.

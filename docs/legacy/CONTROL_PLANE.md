@@ -1,13 +1,5 @@
 # Control Plane
 
-> **⚠️ SUPERSEDED**
->
-> This document describes a "Control Plane" concept that is not part of Architecture v1.0. The canonical architecture (`architecture/ARCHITECTURE.md`) uses Kernel, Platform Engines, and Shared Platform Services instead of a Control Plane/Data Plane/Persistence Plane model.
->
-> The Kernel is the executive orchestration layer responsible for project intake, execution planning, Platform Engine orchestration, Shared Platform Service orchestration, and lifecycle coordination.
->
-> This document is preserved in `docs/legacy/CONTROL_PLANE.md` for historical reference.
-
 ## Purpose
 
 The Control Plane is the orchestration and management layer of the AutoForge AI platform. It is responsible for all decision-making, coordination, and state management activities — determining what work to do, when to do it, and how to respond to changing conditions. The Control Plane is the "brain" of the platform.

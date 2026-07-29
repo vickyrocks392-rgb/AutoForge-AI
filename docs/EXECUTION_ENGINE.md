@@ -1,12 +1,14 @@
 # Execution Engine
 
+> **Note:** This document is consistent with Architecture v1.0 (`architecture/ARCHITECTURE.md`). The Execution Engine is a Platform Engine responsible for executing units of work dispatched by the Workflow Engine. It manages the engineering loops in which workers perform implementation, coordinates engineering workers, publishes events, updates runtime state, and produces artifacts.
+
 ## Purpose
 
-This document describes the Execution Engine — the operational runtime that dispatches, monitors, and manages AI agent tasks within the AutoForge AI platform. It is the component that turns plans into action.
+This document describes the Execution Engine — the Platform Engine that dispatches, monitors, and manages engineering worker tasks within the AutoForge AI platform. It is the component that turns plans into action.
 
 ## Scope
 
-This document covers the conceptual architecture of the Execution Engine, its responsibilities, and its relationship to other platform components. Implementation details are deferred to the `packages/execution` package.
+This document covers the conceptual architecture of the Execution Engine, its responsibilities, and its relationship to other platform components. Implementation details are deferred to the `packages/execution` package. The canonical specification for the Execution Engine is in `architecture/ARCHITECTURE.md` Section 8.
 
 ---
 

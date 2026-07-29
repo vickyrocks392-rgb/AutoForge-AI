@@ -1,12 +1,14 @@
 # Failure Recovery
 
+> **Note:** This document is consistent with Architecture v1.0 (`architecture/ARCHITECTURE.md`). The Execution Continuity Manager is the Shared Platform Service responsible for execution resilience, including automatic retries, automatic provider failover, execution checkpoint restoration, execution resumption, context preservation, degraded execution, timeout recovery, and provider outage recovery.
+
 ## Purpose
 
 This document defines the failure recovery architecture for the AutoForge AI execution system. It describes how the platform detects, classifies, and recovers from failures across all components — from individual LLM call failures to complete system crashes.
 
 ## Scope
 
-This document covers failure classification, retry policies, circuit breakers, fallback strategies, and recovery procedures. It does not cover checkpointing (see CHECKPOINT_MANAGER.md) or state management (see STATE_MANAGER.md).
+This document covers failure classification, retry policies, circuit breakers, fallback strategies, and recovery procedures. It does not cover checkpointing (see CHECKPOINT_MANAGER.md) or state management (see STATE_MANAGER.md). The Execution Continuity Manager is the canonical service responsible for execution resilience in Architecture v1.0.
 
 ---
 

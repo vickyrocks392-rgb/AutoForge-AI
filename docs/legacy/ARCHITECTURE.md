@@ -1,13 +1,5 @@
 # Architecture
 
-> **⚠️ SUPERSEDED**
->
-> This document describes a previous version of the AutoForge AI architecture (service-oriented architecture with Planner, Research, Requirements, Architecture, UI, Backend, Frontend, Testing, Deployment, and Documentation as independent services).
->
-> The canonical architecture specification is now `architecture/ARCHITECTURE.md` (Architecture v1.0), which describes the platform in terms of Kernel, Platform Engines, Shared Platform Services, and Workers.
->
-> This document is preserved in `docs/legacy/ARCHITECTURE.md` for historical reference.
-
 ## Purpose
 
 This document describes the architectural principles, patterns, and decisions that guide the design and evolution of the AutoForge AI platform.

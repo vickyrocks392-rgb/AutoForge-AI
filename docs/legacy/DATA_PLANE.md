@@ -1,11 +1,5 @@
 # Data Plane
 
-> **⚠️ SUPERSEDED**
->
-> This document describes a "Data Plane" concept that is not part of Architecture v1.0. The canonical architecture (`architecture/ARCHITECTURE.md`) uses Kernel, Platform Engines, and Shared Platform Services instead of a Control Plane/Data Plane/Persistence Plane model.
->
-> This document is preserved in `docs/legacy/DATA_PLANE.md` for historical reference.
-
 ## Purpose
 
 The Data Plane is the execution and processing layer of the AutoForge AI platform. It is responsible for all data-intensive operations — executing AI agent tasks, running quality gates, processing artifacts, and performing data transformations. The Data Plane is the "muscle" of the platform, executing the decisions made by the Control Plane.
@@ -102,11 +96,11 @@ The performance optimization layer:
 │  Plane       │                │   Plane      │
 │              │◀───────────────│              │
 └──────────────┘    Results      └──────┬───────┘
-                                         │
-                                 ┌───────▼───────┐
-                                 │  Persistence  │
-                                 │  Plane        │
-                                 └───────────────┘
+                                        │
+                                ┌───────▼───────┐
+                                │  Persistence  │
+                                │  Plane        │
+                                └───────────────┘
 ```
 
 - **Control Plane → Data Plane**: Execute commands (run task, evaluate gate, process artifact)

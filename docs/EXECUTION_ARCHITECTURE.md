@@ -1,12 +1,14 @@
 # Execution Architecture
 
+> **Note:** This document describes the execution subsystem in terms consistent with Architecture v1.0 (`architecture/ARCHITECTURE.md`). The canonical architecture describes the Execution Engine as a Platform Engine responsible for executing units of work dispatched by the Workflow Engine, managing engineering loops, coordinating engineering workers, and producing artifacts.
+
 ## Purpose
 
-This document defines the overall execution architecture for AutoForge AI — the system that transforms a user request into a completed software engineering project through autonomous, long-running, fault-tolerant execution. It describes how the platform orchestrates AI agents, manages state, handles failures, and ensures traceability across multi-hour execution sessions.
+This document defines the overall execution architecture for AutoForge AI — the system that transforms a user request into a completed software engineering project through autonomous, long-running, fault-tolerant execution. It describes how the platform orchestrates engineering workers, manages state, handles failures, and ensures traceability across multi-hour execution sessions.
 
 ## Scope
 
-This document covers the high-level architecture of the execution subsystem, its major components, their interactions, and the design principles that govern them. It does not cover implementation details of individual components, which are documented in their respective architecture documents.
+This document covers the high-level architecture of the execution subsystem, its major components, their interactions, and the design principles that govern them. It does not cover implementation details of individual components, which are documented in their respective architecture documents. The canonical architecture specification is `architecture/ARCHITECTURE.md`.
 
 ---
 
