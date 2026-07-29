@@ -1,5 +1,13 @@
 # Services
 
+> **⚠️ TRANSITIONAL PLACEHOLDER**
+>
+> This directory reflects the previous SDLC-based service architecture (Planner, Research, Requirements, Architecture, UI, Backend, Frontend, Testing, Deployment, Documentation).
+>
+> Architecture v1.0 (`architecture/ARCHITECTURE.md`) replaces this model with Kernel, Platform Engines, Shared Platform Services, and Workers.
+>
+> These service directories are retained as transitional placeholders. Future implementation will replace them with the Architecture v1.0 structure.
+
 ## Purpose
 
 This directory contains the AI agent services that implement each phase of the Software Development Life Cycle (SDLC). Each service is an independent, self-contained module with a single responsibility.
@@ -11,7 +19,7 @@ This directory contains the AI agent services that implement each phase of the S
 - Produce artifacts consumed by downstream services
 - Handle errors gracefully and report state to the workflow engine
 
-## Future Contents
+## Current Contents
 
 - `planner/` — Task decomposition and planning
 - `research/` — Context gathering and research

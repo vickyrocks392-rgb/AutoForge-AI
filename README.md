@@ -12,7 +12,7 @@ To redefine how software is built by creating an autonomous engineering system t
 
 AutoForge AI aims to be the operating system for AI-driven software development.
 
-See the full [Vision Document](docs/VISION.md) for a deeper articulation of the long-term vision.
+See the full [Vision Document](architecture/VISION.md) for a deeper articulation of the long-term vision.
 
 ---
 
@@ -28,7 +28,7 @@ This is not assisted coding. This is autonomous engineering.
 
 ## Engineering Principles
 
-The following principles guide every architectural decision in this project. See [Principles](docs/PRINCIPLES.md) for the full document.
+The following principles guide every architectural decision in this project. See [Principles](architecture/PRINCIPLES.md) for the full document.
 
 1. **Separation of Concerns** — Each service owns one domain. No overlap. No ambiguity.
 2. **Contract-First Design** — Services communicate through strict, versioned interfaces.
@@ -49,7 +49,7 @@ The **Execution Engine** (`packages/execution`) is the operational heart of Auto
 
 While the workflow engine defines *what* to do and *when*, the Execution Engine determines *how* it actually happens — managing resources, retries, timeouts, and the physical act of running agent tasks.
 
-See [Execution Engine](docs/EXECUTION_ENGINE.md) for the full architecture document.
+See [Execution Engine](docs/subsystems/EXECUTION_ENGINE.md) for the full architecture document.
 
 ---
 
@@ -117,18 +117,17 @@ AutoForge-AI/
 
 | Document | Description |
 |---|---|
-| [Vision](docs/VISION.md) | Long-term vision and aspirational direction |
-| [Principles](docs/PRINCIPLES.md) | Core engineering and design principles |
-| [System Overview](docs/SYSTEM_OVERVIEW.md) | High-level system architecture and components |
-| [Architecture](docs/ARCHITECTURE.md) | Architectural principles, patterns, and decisions |
-| [Execution Engine](docs/EXECUTION_ENGINE.md) | The operational runtime for AI agent tasks |
-| [AI Organization](docs/AI_ORGANIZATION.md) | How AI agents are structured and collaborate |
-| [Agent Protocol](docs/AGENT_PROTOCOL.md) | Communication protocol between engine and agents |
-| [Task Engine](docs/TASK_ENGINE.md) | Task definition, lifecycle, and management |
-| [Memory Engine](docs/MEMORY_ENGINE.md) | State persistence, context, and knowledge management |
-| [Roadmap](docs/ROADMAP.md) | Development phases, milestones, and deliverables |
-| [Coding Standards](docs/CODING_STANDARDS.md) | Code conventions, testing, and quality standards |
-| [ADR](docs/ADR.md) | Architecture Decision Records template and index |
+| [Vision](architecture/VISION.md) | Long-term vision and aspirational direction |
+| [Principles](architecture/PRINCIPLES.md) | Core engineering and design principles |
+| [Architecture](architecture/ARCHITECTURE.md) | Canonical architecture specification (v1.0) |
+| [Execution Engine](docs/subsystems/EXECUTION_ENGINE.md) | The operational runtime for AI agent tasks |
+| [AI Organization](docs/subsystems/AI_ORGANIZATION.md) | How AI agents are structured and collaborate |
+| [Agent Protocol](docs/subsystems/AGENT_PROTOCOL.md) | Communication protocol between engine and agents |
+| [Task Engine](docs/subsystems/TASK_ENGINE.md) | Task definition, lifecycle, and management |
+| [Memory Engine](docs/subsystems/MEMORY_ENGINE.md) | State persistence, context, and knowledge management |
+| [Repository Structure](architecture/REPOSITORY_STRUCTURE.md) | Canonical repository governance and organization |
+| [Coding Standards](docs/standards/CODING_STANDARDS.md) | Code conventions, testing, and quality standards |
+| [ADR](docs/adr/ADR.md) | Architecture Decision Records template and index |
 
 ---
 

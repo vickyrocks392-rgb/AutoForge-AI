@@ -20,8 +20,8 @@ It serves as a living record for the engineering team to track, prioritise, and 
 
 - Bug reports — use the issue tracker
 - Feature requests — use the roadmap or feature request template
-- Roadmap items — documented in `docs/ROADMAP.md`
-- Architecture decisions — documented in `docs/ADR.md`
+- Roadmap items — documented in the Long-Term Roadmap section of `README.md`
+- Architecture decisions — documented in `docs/adr/ADR.md`
 - Day-to-day tasks — use the project board
 
 ---
@@ -201,7 +201,7 @@ It serves as a living record for the engineering team to track, prioritise, and 
 | **Area** | Repository-wide packaging |
 | **Reason** | The `packages/models/` package was the first Python package in the repository. Its packaging setup (`pyproject.toml`, `src` layout, editable install) should serve as the template for all future Python packages. However, no convention document exists yet. |
 | **Current Impact** | Future Python packages may diverge in structure, leading to inconsistent build, test, and deployment workflows. |
-| **Recommended Solution** | Document the Python package convention in `docs/CODING_STANDARDS.md` or a new `docs/PYTHON_PACKAGING.md`. Include: `src` layout, `pyproject.toml` structure, editable install workflow, test configuration, and naming conventions. |
+| **Recommended Solution** | Document the Python package convention in `docs/standards/CODING_STANDARDS.md` or a new `docs/PYTHON_PACKAGING.md`. Include: `src` layout, `pyproject.toml` structure, editable install workflow, test configuration, and naming conventions. |
 | **Target Phase** | Platform Stabilisation |
 | **Created** | 2026-07-25 |
 
