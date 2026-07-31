@@ -24,7 +24,9 @@ from autoforge_kernel.interfaces import (
     ProjectInitializer,
     IdentifierGenerator,
     IntentAnalysisResult,
+    EventBus,
 )
+from autoforge_kernel.event_utils import publish_event, make_timestamp
 
 
 class DefaultRequestValidator(RequestValidator):
@@ -119,7 +121,7 @@ class DefaultProjectInitializer(ProjectInitializer):
 
     def __init__(
         self,
-        event_bus: Any | None = None,
+        event_bus: EventBus | None = None,
     ):
         """
         Initialize the project initializer.
@@ -153,18 +155,17 @@ class DefaultProjectInitializer(ProjectInitializer):
         )
 
         # Publish project.created event
-        if self.event_bus:
-            event = DomainBaseEvent(
-                event_type=EventType.CREATED,
-                event_category=EventCategory.PROJECT,
-                aggregate_id=project.id,
-                aggregate_type="Project",
-                metadata={
-                    "project_name": project.name,
-                    "request_text": request.request_text[:100],
-                },
-            )
-            await self.event_bus.publish(event)
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_CREATED,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project.id,
+            aggregate_type="Project",
+            metadata={
+                "project_name": project.name,
+                "request_text": request.request_text[:100],
+            },
+        )
 
         return project
 
@@ -247,7 +248,7 @@ class RequestIntakeModule:
         normalizer: RequestNormalizer | None = None,
         initializer: ProjectInitializer | None = None,
         identifier_generator: IdentifierGenerator | None = None,
-        event_bus: Any | None = None,
+        event_bus: EventBus | None = None,
     ):
         """
         Initialize the request intake module.
@@ -291,20 +292,19 @@ class RequestIntakeModule:
         workflow_id = self.identifier_generator.generate_workflow_id()
 
         # Step 5: Publish project.created event
-        if self.event_bus:
-            event = DomainBaseEvent(
-                event_type=EventType.CREATED,
-                event_category=EventCategory.PROJECT,
-                aggregate_id=project.id,
-                aggregate_type="Project",
-                correlation_id=correlation_id,
-                metadata={
-                    "project_name": project.name,
-                    "workflow_id": str(workflow_id),
-                    "request_text": normalized_request.request_text[:100],
-                },
-            )
-            await self.event_bus.publish(event)
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_CREATED,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project.id,
+            aggregate_type="Project",
+            correlation_id=correlation_id,
+            metadata={
+                "project_name": project.name,
+                "workflow_id": str(workflow_id),
+                "request_text": normalized_request.request_text[:100],
+            },
+        )
 
         return {
             "project_id": project.id,

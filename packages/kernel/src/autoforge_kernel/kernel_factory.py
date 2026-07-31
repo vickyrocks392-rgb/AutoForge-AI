@@ -159,11 +159,20 @@ class KernelFactory:
             event_bus=self.event_bus,
             runtime_state_manager=self.runtime_state_manager,
         )
-        lifecycle_module = LifecycleCoordinationModule()
+        # Convert kernel_id from string to UUID if needed
+        kernel_id_uuid = None
+        if self.kernel_id:
+            import uuid as uuid_module
+            kernel_id_uuid = uuid_module.UUID(self.kernel_id) if isinstance(self.kernel_id, str) else self.kernel_id
+
+        lifecycle_module = LifecycleCoordinationModule(
+            event_bus=self.event_bus,
+            kernel_id=kernel_id_uuid,
+        )
 
         # Create Kernel with all dependencies
         kernel = Kernel(
-            kernel_id=self.kernel_id,
+            kernel_id=kernel_id_uuid,
             version=self.version,
             config=self.config,
             # Service dependencies

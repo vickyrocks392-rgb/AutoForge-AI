@@ -33,6 +33,24 @@ class EventCategory(str, Enum):
     MEMORY = "memory"
     """Events related to memory entries (store, update, delete, etc.)."""
 
+    SYSTEM_EVENT = "system_event"
+    """Events related to system-level operations."""
+
+    LOOP = "loop"
+    """Events related to engineering loop lifecycle."""
+
+    APPROVAL = "approval"
+    """Events related to human approval flow."""
+
+    FAILURE = "failure"
+    """Events related to failures and recovery."""
+
+    REVIEW = "review"
+    """Events related to review engine."""
+
+    SERVICE = "service"
+    """Events related to infrastructure services."""
+
 
 class EventType(str, Enum):
     """
@@ -56,6 +74,36 @@ class EventType(str, Enum):
 
     PROJECT_DELETED = "project.deleted"
     """A project was permanently deleted."""
+
+    PROJECT_STARTED = "project.started"
+    """Project execution begins."""
+
+    PROJECT_PLANNING = "project.planning"
+    """Planning phase begins."""
+
+    PROJECT_RUNNING = "project.running"
+    """Execution begins."""
+
+    PROJECT_REVIEWING = "project.reviewing"
+    """Awaiting human review."""
+
+    PROJECT_PAUSED = "project.paused"
+    """Execution paused."""
+
+    PROJECT_RESUMED = "project.resumed"
+    """Execution resumes."""
+
+    PROJECT_COMPLETING = "project.completing"
+    """Validating completion."""
+
+    PROJECT_FINISHED = "project.finished"
+    """Project completed."""
+
+    PROJECT_FAILED = "project.failed"
+    """Project failed."""
+
+    PROJECT_CANCELLED = "project.cancelled"
+    """Project cancelled."""
 
     # ------------------------------------------------------------------
     # Task events
@@ -95,6 +143,30 @@ class EventType(str, Enum):
 
     TASK_DELETED = "task.deleted"
     """A task was deleted."""
+
+    TASK_DISPATCHED = "task.dispatched"
+    """Task dispatched to worker."""
+
+    TASK_RETRYING = "task.retrying"
+    """Task retrying."""
+
+    TASK_WAITING = "task.waiting"
+    """Task waiting for approval."""
+
+    # ------------------------------------------------------------------
+    # Worker dispatch events
+    # ------------------------------------------------------------------
+    WORKER_DISPATCHED = "worker.dispatched"
+    """Worker dispatched to task."""
+
+    # ------------------------------------------------------------------
+    # Intent and planning events
+    # ------------------------------------------------------------------
+    INTENT_ANALYZED = "intent.analyzed"
+    """Intent analysis completed."""
+
+    PLAN_CREATED = "plan.created"
+    """Execution plan created."""
 
     # ------------------------------------------------------------------
     # Execution events
@@ -146,3 +218,168 @@ class EventType(str, Enum):
 
     MEMORY_RETRIEVED = "memory.retrieved"
     """A memory entry was retrieved (read access)."""
+
+    # ------------------------------------------------------------------
+    # Loop lifecycle events
+    # ------------------------------------------------------------------
+    LOOP_STARTED = "loop.started"
+    """Engineering loop begins."""
+
+    LOOP_PLANNING = "loop.planning"
+    """Loop in planning phase."""
+
+    LOOP_EXECUTING = "loop.executing"
+    """Loop executing tasks."""
+
+    LOOP_REVIEWING = "loop.reviewing"
+    """Loop reviewing outputs."""
+
+    LOOP_COMPLETED = "loop.completed"
+    """Loop completed successfully."""
+
+    LOOP_REMEDIATING = "loop.remediating"
+    """Loop requires remediation."""
+
+    LOOP_ESCALATED = "loop.escalated"
+    """Loop escalated to human."""
+
+    LOOP_FAILED = "loop.failed"
+    """Loop failed."""
+
+    # ------------------------------------------------------------------
+    # Approval events
+    # ------------------------------------------------------------------
+    APPROVAL_REQUIRED = "approval.required"
+    """Human approval needed."""
+
+    APPROVAL_DECIDED = "approval.decided"
+    """Human made decision."""
+
+    APPROVAL_TIMEOUT = "approval.timeout"
+    """Approval timeout."""
+
+    APPROVAL_ESCALATED = "approval.escalated"
+    """Approval escalated."""
+
+    # ------------------------------------------------------------------
+    # Failure and recovery events
+    # ------------------------------------------------------------------
+    FAILURE_DETECTED = "failure.detected"
+    """Failure detected."""
+
+    RECOVERY_STARTED = "recovery.started"
+    """Recovery begins."""
+
+    RECOVERY_COMPLETED = "recovery.completed"
+    """Recovery completed."""
+
+    RECOVERY_FAILED = "recovery.failed"
+    """Recovery failed."""
+
+    CHECKPOINT_RESTORED = "checkpoint.restored"
+    """Checkpoint restored."""
+
+    # ------------------------------------------------------------------
+    # Review events
+    # ------------------------------------------------------------------
+    REVIEW_COMPLETED = "review.completed"
+    """Review completed."""
+
+    REVIEW_APPROVED = "review.approved"
+    """Artifact approved."""
+
+    REVIEW_REJECTED = "review.rejected"
+    """Artifact rejected."""
+
+    REVIEW_CHANGES_REQUESTED = "review.changes_requested"
+    """Changes requested."""
+
+    # ------------------------------------------------------------------
+    # Service events
+    # ------------------------------------------------------------------
+    SERVICE_DEGRADED = "service.degraded"
+    """Service degraded."""
+
+    SERVICE_RECOVERED = "service.recovered"
+    """Service recovered."""
+
+    SERVICE_FAILED = "service.failed"
+    """Service failed."""
+
+    # ------------------------------------------------------------------
+    # Kernel lifecycle events
+    # ------------------------------------------------------------------
+    KERNEL_CREATED = "kernel.created"
+    """Kernel instance created."""
+
+    KERNEL_STARTING = "kernel.starting"
+    """Kernel is starting up."""
+
+    KERNEL_STARTED = "kernel.started"
+    """Kernel has started."""
+
+    KERNEL_PAUSING = "kernel.pausing"
+    """Kernel is pausing."""
+
+    KERNEL_PAUSED = "kernel.paused"
+    """Kernel is paused."""
+
+    KERNEL_RESUMING = "kernel.resuming"
+    """Kernel is resuming."""
+
+    KERNEL_READY = "kernel.ready"
+    """Kernel is ready to accept requests."""
+
+    KERNEL_STOPPING = "kernel.stopping"
+    """Kernel is stopping."""
+
+    KERNEL_STOPPED = "kernel.stopped"
+    """Kernel has stopped."""
+
+    # ------------------------------------------------------------------
+    # System events (for backward compatibility)
+    # ------------------------------------------------------------------
+    CREATED = "created"
+    """Generic created event."""
+
+    UPDATED = "updated"
+    """Generic updated event."""
+
+    STARTED = "started"
+    """Generic started event."""
+
+    COMPLETED = "completed"
+    """Generic completed event."""
+
+    FAILED = "failed"
+    """Generic failed event."""
+
+    PAUSED = "paused"
+    """Generic paused event."""
+
+    RESUMED = "resumed"
+    """Generic resumed event."""
+
+    CANCELLED = "cancelled"
+    """Generic cancelled event."""
+
+    APPROVED = "approved"
+    """Generic approved event."""
+
+    REJECTED = "rejected"
+    """Generic rejected event."""
+
+    CHANGES_REQUESTED = "changes_requested"
+    """Generic changes requested event."""
+
+    RESTORED = "restored"
+    """Generic restored event."""
+
+    DEGRADED = "degraded"
+    """Generic degraded event."""
+
+    RECOVERED = "recovered"
+    """Generic recovered event."""
+
+    SYSTEM_EVENT = "system_event"
+    """Fallback for unknown event types."""

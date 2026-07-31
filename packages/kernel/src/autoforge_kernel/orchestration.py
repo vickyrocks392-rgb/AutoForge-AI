@@ -11,6 +11,8 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from autoforge_events.event_types import EventCategory, EventType
+
 from autoforge_kernel.interfaces import (
     OrchestrationEngine,
     LoopOrchestrator,
@@ -26,6 +28,7 @@ from autoforge_kernel.interfaces import (
     ExecutionContinuityManager,
     ModelRouter,
 )
+from autoforge_kernel.event_utils import publish_event, make_timestamp
 
 
 class DefaultOrchestrationEngine(OrchestrationEngine):
@@ -99,14 +102,14 @@ class DefaultOrchestrationEngine(OrchestrationEngine):
             )
 
         # Publish project.running event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="started",
-                event_category="project",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-                metadata={"workflow_id": str(executable_workflow.workflow_id)},
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_RUNNING,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"workflow_id": str(executable_workflow.workflow_id)},
+        )
 
         # Execute each loop in the workflow
         for loop in executable_workflow.loops:
@@ -116,6 +119,36 @@ class DefaultOrchestrationEngine(OrchestrationEngine):
                 "workflow_id": str(executable_workflow.workflow_id),
                 "loop": loop,
             }
+
+            # Publish loop.started event
+            await publish_event(
+                event_bus=self.event_bus,
+                event_type=EventType.LOOP_STARTED,
+                event_category=EventCategory.LOOP,
+                aggregate_id=project_id,
+                aggregate_type="Project",
+                metadata={"loop_type": loop_type},
+            )
+
+            # Publish loop.planning event
+            await publish_event(
+                event_bus=self.event_bus,
+                event_type=EventType.LOOP_PLANNING,
+                event_category=EventCategory.LOOP,
+                aggregate_id=project_id,
+                aggregate_type="Project",
+                metadata={"loop_type": loop_type},
+            )
+
+            # Publish loop.executing event
+            await publish_event(
+                event_bus=self.event_bus,
+                event_type=EventType.LOOP_EXECUTING,
+                event_category=EventCategory.LOOP,
+                aggregate_id=project_id,
+                aggregate_type="Project",
+                metadata={"loop_type": loop_type},
+            )
 
             # Orchestrate the loop
             loop_result = await self.loop_orchestrator.orchestrate_loop(
@@ -140,28 +173,53 @@ class DefaultOrchestrationEngine(OrchestrationEngine):
             loop_result: The loop result.
         """
         status = loop_result.get("status", "unknown")
+        loop_type = loop_result.get("loop_type", "unknown")
 
         if status == "complete":
             # Loop completed successfully
-            if self.event_bus:
-                await self._publish_event(
-                    event_type="completed",
-                    event_category="loop",
-                    aggregate_id=project_id,
-                    aggregate_type="Project",
-                    metadata={"loop_type": loop_result.get("loop_type")},
-                )
+            await publish_event(
+                event_bus=self.event_bus,
+                event_type=EventType.LOOP_COMPLETED,
+                event_category=EventCategory.LOOP,
+                aggregate_id=project_id,
+                aggregate_type="Project",
+                metadata={"loop_type": loop_type},
+            )
 
         elif status == "remediate":
             # Loop requires remediation
+            await publish_event(
+                event_bus=self.event_bus,
+                event_type=EventType.LOOP_REMEDIATING,
+                event_category=EventCategory.LOOP,
+                aggregate_id=project_id,
+                aggregate_type="Project",
+                metadata={"loop_type": loop_type, "findings": loop_result.get("findings", {})},
+            )
             await self._handle_remediation(project_id, loop_result)
 
         elif status == "escalate":
             # Loop requires human intervention
+            await publish_event(
+                event_bus=self.event_bus,
+                event_type=EventType.LOOP_ESCALATED,
+                event_category=EventCategory.LOOP,
+                aggregate_id=project_id,
+                aggregate_type="Project",
+                metadata={"loop_type": loop_type, "reason": loop_result.get("reason", "Unknown")},
+            )
             await self._handle_escalation(project_id, loop_result)
 
         elif status == "failed":
             # Loop failed
+            await publish_event(
+                event_bus=self.event_bus,
+                event_type=EventType.LOOP_FAILED,
+                event_category=EventCategory.LOOP,
+                aggregate_id=project_id,
+                aggregate_type="Project",
+                metadata={"loop_type": loop_type, "error": loop_result.get("error", "Unknown error")},
+            )
             await self.handle_failure(project_id, loop_result)
 
     async def handle_failure(
@@ -176,28 +234,62 @@ class DefaultOrchestrationEngine(OrchestrationEngine):
             project_id: The project.
             failure: The failure details.
         """
-        # Publish failure event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="failed",
-                event_category="loop",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-                metadata={"error": failure.get("error", "Unknown error")},
-            )
+        # Publish failure.detected event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.FAILURE_DETECTED,
+            event_category=EventCategory.FAILURE,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"error": failure.get("error", "Unknown error"), "source": failure.get("loop_type", "unknown")},
+        )
 
         # Attempt recovery if execution continuity manager is available
         if self.execution_continuity_manager:
             try:
+                # Publish recovery.started event
+                await publish_event(
+                    event_bus=self.event_bus,
+                    event_type=EventType.RECOVERY_STARTED,
+                    event_category=EventCategory.FAILURE,
+                    aggregate_id=project_id,
+                    aggregate_type="Project",
+                    metadata={"failure_id": str(failure.get("failure_id", uuid.uuid4()))},
+                )
+
                 recovery_result = await self.execution_continuity_manager.recover(
                     failure_context=failure
                 )
                 if recovery_result.get("success"):
-                    # Resume execution
-                    pass
+                    # Publish recovery.completed event
+                    await publish_event(
+                        event_bus=self.event_bus,
+                        event_type=EventType.RECOVERY_COMPLETED,
+                        event_category=EventCategory.FAILURE,
+                        aggregate_id=project_id,
+                        aggregate_type="Project",
+                        metadata={"recovery_strategy": recovery_result.get("strategy", "unknown")},
+                    )
+                else:
+                    # Publish recovery.failed event
+                    await publish_event(
+                        event_bus=self.event_bus,
+                        event_type=EventType.RECOVERY_FAILED,
+                        event_category=EventCategory.FAILURE,
+                        aggregate_id=project_id,
+                        aggregate_type="Project",
+                        metadata={"error": recovery_result.get("error", "Recovery failed")},
+                    )
             except Exception:
                 # Recovery failed, escalate to human
-                pass
+                await publish_event(
+                    event_bus=self.event_bus,
+                    event_type=EventType.RECOVERY_FAILED,
+                    event_category=EventCategory.FAILURE,
+                    aggregate_id=project_id,
+                    aggregate_type="Project",
+                    metadata={"error": "Recovery failed with exception"},
+                )
 
     async def _handle_remediation(self, project_id: uuid.UUID, loop_result: dict[str, Any]) -> None:
         """
@@ -229,63 +321,18 @@ class DefaultOrchestrationEngine(OrchestrationEngine):
         if self.runtime_state_manager:
             await self.runtime_state_manager.transition_state(
                 project_id=project_id,
-                new_status="Reviewing",
+                new_status="reviewing",
             )
 
-        # Publish escalation event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="escalated",
-                event_category="loop",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-                metadata={"reason": loop_result.get("reason", "Unknown")},
-            )
-
-    async def _publish_event(
-        self,
-        event_type: str,
-        event_category: str,
-        aggregate_id: uuid.UUID,
-        aggregate_type: str,
-        metadata: dict[str, Any] | None = None,
-    ) -> None:
-        """
-        Publish an event.
-
-        Args:
-            event_type: The event type.
-            event_category: The event category.
-            aggregate_id: The aggregate ID.
-            aggregate_type: The aggregate type.
-            metadata: Optional metadata.
-        """
-        if not self.event_bus:
-            return
-
-        from autoforge_events.base import BaseEvent as DomainBaseEvent
-        from autoforge_events.event_types import EventCategory, EventType
-
-        # Map string to enum
-        try:
-            evt_type = EventType[event_type.upper()]
-        except KeyError:
-            evt_type = EventType.SYSTEM_EVENT
-
-        try:
-            evt_category = EventCategory[event_category.upper()]
-        except KeyError:
-            evt_category = EventCategory.SYSTEM_EVENT
-
-        event = DomainBaseEvent(
-            event_type=evt_type,
-            event_category=evt_category,
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            metadata=metadata or {},
+        # Publish project.reviewing event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_REVIEWING,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"reason": loop_result.get("reason", "Unknown")},
         )
-
-        await self.event_bus.publish(event)
 
 
 class DefaultLoopOrchestrator(LoopOrchestrator):
@@ -297,8 +344,8 @@ class DefaultLoopOrchestrator(LoopOrchestrator):
         self,
         execution_engine: ExecutionEngine | None = None,
         review_engine: ReviewEngine | None = None,
-        event_bus: Any | None = None,
-        runtime_state_manager: Any | None = None,
+        event_bus: EventBus | None = None,
+        runtime_state_manager: RuntimeStateManager | None = None,
     ):
         """
         Initialize the loop orchestrator.
@@ -334,17 +381,41 @@ class DefaultLoopOrchestrator(LoopOrchestrator):
         if not self.execution_engine:
             raise RuntimeError("Execution Engine not configured")
 
-        # Update loop state
-        if self.runtime_state_manager:
-            await self.runtime_state_manager.update_project(
-                project=None,  # TODO: Update with actual project state
-            )
+        # Publish loop.planning event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.LOOP_PLANNING,
+            event_category=EventCategory.LOOP,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"loop_type": loop_type},
+        )
+
+        # Publish loop.executing event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.LOOP_EXECUTING,
+            event_category=EventCategory.LOOP,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"loop_type": loop_type},
+        )
 
         # Execute the loop
         loop_result = await self.execution_engine.execute_loop(
             loop_type=loop_type,
             loop_input=loop_context,
             context=loop_context,
+        )
+
+        # Publish loop.reviewing event after execution
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.LOOP_REVIEWING,
+            event_category=EventCategory.LOOP,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"loop_type": loop_type},
         )
 
         # Add loop type to result
@@ -356,14 +427,20 @@ class DefaultLoopOrchestrator(LoopOrchestrator):
 class DefaultWorkerDispatchCoordinator(WorkerDispatchCoordinator):
     """
     Default implementation of worker dispatch coordination.
+
+    Implements the Worker Dispatch Module per Kernel Specification v1.0 Section 7.5:
+    - Assignment Validator: Validates worker assignments from Workflow Engine
+    - Dispatch Executor: Executes worker dispatch operations
+    - Dispatch Monitor: Monitors dispatch execution and status
+    - Dispatch State Synchronizer: Synchronizes dispatch state with Runtime State Manager
     """
 
     def __init__(
         self,
         execution_engine: ExecutionEngine | None = None,
-        event_bus: Any | None = None,
-        runtime_state_manager: Any | None = None,
-        model_router: Any | None = None,
+        event_bus: EventBus | None = None,
+        runtime_state_manager: RuntimeStateManager | None = None,
+        model_router: ModelRouter | None = None,
     ):
         """
         Initialize the worker dispatch coordinator.
@@ -387,6 +464,12 @@ class DefaultWorkerDispatchCoordinator(WorkerDispatchCoordinator):
         """
         Dispatch a worker for a task.
 
+        Implements the full dispatch process:
+        1. Assignment validation
+        2. Dispatch execution
+        3. Dispatch monitoring
+        4. Dispatch state synchronization
+
         Args:
             project_id: The project.
             task: The task to dispatch.
@@ -397,7 +480,13 @@ class DefaultWorkerDispatchCoordinator(WorkerDispatchCoordinator):
         if not self.execution_engine:
             raise RuntimeError("Execution Engine not configured")
 
-        # Select model if model router is available
+        # Step 1: Assignment Validation
+        # Validate worker assignment from Workflow Engine
+        worker_type = task.get("worker_type", "default")
+        task_id = task.get("task_id", str(uuid.uuid4()))
+        self._validate_assignment(worker_type, task)
+
+        # Step 2: Select model if model router is available
         if self.model_router:
             try:
                 model = await self.model_router.select_model(task=task)
@@ -406,69 +495,75 @@ class DefaultWorkerDispatchCoordinator(WorkerDispatchCoordinator):
                 # Model selection failed, continue without model
                 pass
 
-        # Dispatch worker
+        # Step 3: Dispatch Execution
+        # Publish worker.dispatched event per Kernel Specification v1.0 Section 14.2
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.WORKER_DISPATCHED,
+            event_category=EventCategory.TASK,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={
+                "task_id": task_id,
+                "worker": worker_type,
+                "model": task.get("model", {}).get("model_id", "unknown"),
+            },
+        )
+
+        # Execute dispatch through Execution Engine
         result = await self.execution_engine.dispatch_worker(
-            worker_type=task.get("worker_type", "default"),
+            worker_type=worker_type,
             task=task,
             context={"project_id": str(project_id)},
         )
 
-        # Publish worker dispatched event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="started",
-                event_category="task",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-                metadata={"task_id": task.get("task_id")},
+        # Step 4: Dispatch Monitoring & State Synchronization
+        # Update task state in Runtime State Manager
+        if self.runtime_state_manager:
+            await self.runtime_state_manager.transition_state(
+                project_id=project_id,
+                new_status="running",
+                metadata={
+                    "task_id": task_id,
+                    "worker_type": worker_type,
+                    "dispatched_at": make_timestamp(),
+                },
             )
+
+        # Publish task.started event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.TASK_STARTED,
+            event_category=EventCategory.TASK,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"task_id": task_id, "worker_type": worker_type},
+        )
 
         return result
 
-    async def _publish_event(
-        self,
-        event_type: str,
-        event_category: str,
-        aggregate_id: uuid.UUID,
-        aggregate_type: str,
-        metadata: dict[str, Any] | None = None,
-    ) -> None:
+    def _validate_assignment(self, worker_type: str, task: dict[str, Any]) -> None:
         """
-        Publish an event.
+        Validate worker assignment from Workflow Engine.
 
         Args:
-            event_type: The event type.
-            event_category: The event category.
-            aggregate_id: The aggregate ID.
-            aggregate_type: The aggregate type.
-            metadata: Optional metadata.
+            worker_type: The type of worker.
+            task: The task definition.
+
+        Raises:
+            ValueError: If the assignment is invalid.
         """
-        if not self.event_bus:
-            return
+        if not worker_type:
+            raise ValueError("Worker type must be specified")
 
-        from autoforge_events.base import BaseEvent as DomainBaseEvent
-        from autoforge_events.event_types import EventCategory, EventType
+        if not task.get("task_id") and not task.get("description"):
+            raise ValueError("Task must have a task_id or description")
 
-        # Map string to enum
-        try:
-            evt_type = EventType[event_type.upper()]
-        except KeyError:
-            evt_type = EventType.SYSTEM_EVENT
-
-        try:
-            evt_category = EventCategory[event_category.upper()]
-        except KeyError:
-            evt_category = EventCategory.SYSTEM_EVENT
-
-        event = DomainBaseEvent(
-            event_type=evt_type,
-            event_category=evt_category,
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            metadata=metadata or {},
-        )
-
-        await self.event_bus.publish(event)
+        # Validate that required fields are present
+        required_fields = ["description"]
+        for field in required_fields:
+            if field not in task and field != "task_id":
+                raise ValueError(f"Task missing required field: {field}")
 
 
 class OrchestrationModule:

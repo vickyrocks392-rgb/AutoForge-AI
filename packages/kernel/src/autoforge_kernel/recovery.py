@@ -10,6 +10,8 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from autoforge_events.event_types import EventCategory, EventType
+
 from autoforge_kernel.interfaces import (
     RecoveryModule,
     FailureDetector,
@@ -18,6 +20,7 @@ from autoforge_kernel.interfaces import (
     RuntimeStateManager,
     ExecutionContinuityManager,
 )
+from autoforge_kernel.event_utils import publish_event, make_timestamp
 
 
 class DefaultFailureDetector(FailureDetector):
@@ -39,9 +42,17 @@ class DefaultFailureDetector(FailureDetector):
         """
         # Check if event is a failure event
         if hasattr(event, "event_type"):
-            from autoforge_events.event_types import EventType
-
-            if event.event_type in [EventType.FAILED, EventType.CANCELLED]:
+            if event.event_type in [
+                EventType.LOOP_FAILED,
+                EventType.TASK_FAILED,
+                EventType.PROJECT_FAILED,
+                EventType.EXECUTION_FAILED,
+                EventType.SERVICE_FAILED,
+                EventType.RECOVERY_FAILED,
+                EventType.PROJECT_CANCELLED,
+                EventType.TASK_CANCELLED,
+                EventType.EXECUTION_CANCELLED,
+            ]:
                 return {
                     "failure_id": uuid.uuid4(),
                     "source": event.aggregate_type,
@@ -109,8 +120,9 @@ class DefaultRecoveryCoordinator(RecoveryCoordinator):
     def __init__(
         self,
         execution_continuity_manager: ExecutionContinuityManager | None = None,
-        event_bus: Any | None = None,
-        runtime_state_manager: Any | None = None,
+        event_bus: EventBus | None = None,
+        runtime_state_manager: RuntimeStateManager | None = None,
+        failure_detector: FailureDetector | None = None,
     ):
         """
         Initialize the recovery coordinator.
@@ -119,10 +131,12 @@ class DefaultRecoveryCoordinator(RecoveryCoordinator):
             execution_continuity_manager: Execution continuity manager.
             event_bus: Event bus.
             runtime_state_manager: Runtime state manager.
+            failure_detector: Failure detector for classifying failures.
         """
         self.execution_continuity_manager = execution_continuity_manager
         self.event_bus = event_bus
         self.runtime_state_manager = runtime_state_manager
+        self.failure_detector = failure_detector or DefaultFailureDetector()
 
     async def coordinate_recovery(
         self,
@@ -140,41 +154,57 @@ class DefaultRecoveryCoordinator(RecoveryCoordinator):
             Recovery result.
         """
         # Classify failure
-        classified_failure = await self.classify_failure(failure)
+        classified_failure = await self.failure_detector.classify_failure(failure)
 
-        # Publish failure detected event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="failed",
-                event_category="project",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-                metadata={
-                    "failure_id": str(classified_failure.get("failure_id")),
-                    "source": classified_failure.get("source"),
-                    "error": classified_failure.get("error"),
-                },
-            )
+        # Publish failure.detected event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.FAILURE_DETECTED,
+            event_category=EventCategory.FAILURE,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={
+                "failure_id": str(classified_failure.get("failure_id")),
+                "source": classified_failure.get("source"),
+                "error": classified_failure.get("error"),
+                "severity": classified_failure.get("severity"),
+                "recoverable": classified_failure.get("recoverable"),
+            },
+        )
 
         # Attempt recovery if failure is recoverable
         if classified_failure.get("recoverable") and self.execution_continuity_manager:
             try:
+                # Publish recovery.started event
+                await publish_event(
+                    event_bus=self.event_bus,
+                    event_type=EventType.RECOVERY_STARTED,
+                    event_category=EventCategory.FAILURE,
+                    aggregate_id=project_id,
+                    aggregate_type="Project",
+                    metadata={
+                        "failure_id": str(classified_failure.get("failure_id")),
+                        "recovery_strategy": "automatic_retry",
+                    },
+                )
+
                 recovery_result = await self.execution_continuity_manager.recover(
                     failure_context=classified_failure
                 )
 
                 if recovery_result.get("success"):
-                    # Publish recovery completed event
-                    if self.event_bus:
-                        await self._publish_event(
-                            event_type="completed",
-                            event_category="project",
-                            aggregate_id=project_id,
-                            aggregate_type="Project",
-                            metadata={
-                                "recovery_strategy": recovery_result.get("strategy", "unknown"),
-                            },
-                        )
+                    # Publish recovery.completed event
+                    await publish_event(
+                        event_bus=self.event_bus,
+                        event_type=EventType.RECOVERY_COMPLETED,
+                        event_category=EventCategory.FAILURE,
+                        aggregate_id=project_id,
+                        aggregate_type="Project",
+                        metadata={
+                            "recovery_strategy": recovery_result.get("strategy", "unknown"),
+                            "failure_id": str(classified_failure.get("failure_id")),
+                        },
+                    )
 
                     return {
                         "success": True,
@@ -186,67 +216,22 @@ class DefaultRecoveryCoordinator(RecoveryCoordinator):
                 pass
 
         # Recovery failed or not recoverable
-        if self.event_bus:
-            await self._publish_event(
-                event_type="failed",
-                event_category="project",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-                metadata={
-                    "recovery_failed": True,
-                    "error": "Recovery failed or not recoverable",
-                },
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.RECOVERY_FAILED,
+            event_category=EventCategory.FAILURE,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={
+                "failure_id": str(classified_failure.get("failure_id")),
+                "error": "Recovery failed or not recoverable",
+            },
+        )
 
         return {
             "success": False,
             "error": "Recovery failed or not recoverable",
         }
-
-    async def _publish_event(
-        self,
-        event_type: str,
-        event_category: str,
-        aggregate_id: uuid.UUID,
-        aggregate_type: str,
-        metadata: dict[str, Any] | None = None,
-    ) -> None:
-        """
-        Publish an event.
-
-        Args:
-            event_type: The event type.
-            event_category: The event category.
-            aggregate_id: The aggregate ID.
-            aggregate_type: The aggregate type.
-            metadata: Optional metadata.
-        """
-        if not self.event_bus:
-            return
-
-        from autoforge_events.base import BaseEvent as DomainBaseEvent
-        from autoforge_events.event_types import EventCategory, EventType
-
-        # Map string to enum
-        try:
-            evt_type = EventType[event_type.upper()]
-        except KeyError:
-            evt_type = EventType.SYSTEM_EVENT
-
-        try:
-            evt_category = EventCategory[event_category.upper()]
-        except KeyError:
-            evt_category = EventCategory.SYSTEM_EVENT
-
-        event = DomainBaseEvent(
-            event_type=evt_type,
-            event_category=evt_category,
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            metadata=metadata or {},
-        )
-
-        await self.event_bus.publish(event)
 
 
 class DefaultRecoveryModule(RecoveryModule):
@@ -258,8 +243,8 @@ class DefaultRecoveryModule(RecoveryModule):
         self,
         failure_detector: FailureDetector | None = None,
         recovery_coordinator: RecoveryCoordinator | None = None,
-        event_bus: Any | None = None,
-        runtime_state_manager: Any | None = None,
+        event_bus: EventBus | None = None,
+        runtime_state_manager: RuntimeStateManager | None = None,
         execution_continuity_manager: ExecutionContinuityManager | None = None,
     ):
         """
@@ -280,6 +265,7 @@ class DefaultRecoveryModule(RecoveryModule):
         )
         self.event_bus = event_bus
         self.runtime_state_manager = runtime_state_manager
+        self.execution_continuity_manager = execution_continuity_manager
 
     async def handle_failure(
         self,
@@ -325,21 +311,20 @@ class DefaultRecoveryModule(RecoveryModule):
             if result.get("success"):
                 # Update project state
                 if self.runtime_state_manager:
-                    # Update project state to reflect restoration
                     pass
 
                 # Publish checkpoint restored event
-                if self.event_bus:
-                    await self._publish_event(
-                        event_type="completed",
-                        event_category="project",
-                        aggregate_id=project_id,
-                        aggregate_type="Project",
-                        metadata={
-                            "checkpoint_id": str(checkpoint_id),
-                            "restored": True,
-                        },
-                    )
+                await publish_event(
+                    event_bus=self.event_bus,
+                    event_type=EventType.CHECKPOINT_RESTORED,
+                    event_category=EventCategory.FAILURE,
+                    aggregate_id=project_id,
+                    aggregate_type="Project",
+                    metadata={
+                        "checkpoint_id": str(checkpoint_id),
+                        "restored": True,
+                    },
+                )
 
                 return {
                     "success": True,
@@ -352,50 +337,10 @@ class DefaultRecoveryModule(RecoveryModule):
                 "error": str(e),
             }
 
-    async def _publish_event(
-        self,
-        event_type: str,
-        event_category: str,
-        aggregate_id: uuid.UUID,
-        aggregate_type: str,
-        metadata: dict[str, Any] | None = None,
-    ) -> None:
-        """
-        Publish an event.
-
-        Args:
-            event_type: The event type.
-            event_category: The event category.
-            aggregate_id: The aggregate ID.
-            aggregate_type: The aggregate type.
-            metadata: Optional metadata.
-        """
-        if not self.event_bus:
-            return
-
-        from autoforge_events.base import BaseEvent as DomainBaseEvent
-        from autoforge_events.event_types import EventCategory, EventType
-
-        # Map string to enum
-        try:
-            evt_type = EventType[event_type.upper()]
-        except KeyError:
-            evt_type = EventType.SYSTEM_EVENT
-
-        try:
-            evt_category = EventCategory[event_category.upper()]
-        except KeyError:
-            evt_category = EventCategory.SYSTEM_EVENT
-
-        event = DomainBaseEvent(
-            event_type=evt_type,
-            event_category=evt_category,
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            metadata=metadata or {},
-        )
-
-        await self.event_bus.publish(event)
+        return {
+            "success": False,
+            "error": "Checkpoint restoration failed",
+        }
 
 
 class RecoveryModuleWrapper:
@@ -410,8 +355,8 @@ class RecoveryModuleWrapper:
         recovery_module: RecoveryModule | None = None,
         failure_detector: FailureDetector | None = None,
         recovery_coordinator: RecoveryCoordinator | None = None,
-        event_bus: Any | None = None,
-        runtime_state_manager: Any | None = None,
+        event_bus: EventBus | None = None,
+        runtime_state_manager: RuntimeStateManager | None = None,
         execution_continuity_manager: ExecutionContinuityManager | None = None,
     ):
         """

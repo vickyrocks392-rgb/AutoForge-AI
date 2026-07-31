@@ -19,6 +19,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Protocol, Union
 
+from pydantic import Field
+
 from autoforge_models.base import AutoForgeBaseModel
 from autoforge_models.project import Project
 from autoforge_models.task import Task
@@ -31,7 +33,7 @@ from autoforge_models.execution_session import ExecutionSession
 from autoforge_models.memory_entry import MemoryEntry
 from autoforge_models.knowledge import KnowledgeNode
 from autoforge_models.quality_gate import QualityGate
-from autoforge_models.event import BaseEvent
+from autoforge_models.event import Event as ModelEvent
 
 from autoforge_events.base import BaseEvent as DomainBaseEvent
 from autoforge_events.event_types import EventCategory, EventType

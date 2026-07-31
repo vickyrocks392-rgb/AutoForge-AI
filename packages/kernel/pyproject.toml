@@ -1,10 +1,10 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "autoforge-kernel"
-version = "0.1.0"
+version = "1.0.0"
 description = "AutoForge AI Kernel - Executive Orchestrator"
 readme = "README.md"
 license = {text = "MIT"}

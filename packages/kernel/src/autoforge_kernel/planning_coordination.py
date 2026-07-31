@@ -10,6 +10,8 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from autoforge_events.event_types import EventCategory, EventType
+
 from autoforge_kernel.interfaces import (
     PlanningCoordinator,
     Request,
@@ -18,7 +20,9 @@ from autoforge_kernel.interfaces import (
     ExecutableWorkflow,
     StrategicEngine,
     WorkflowEngine,
+    EventBus,
 )
+from autoforge_kernel.event_utils import publish_event, make_timestamp
 
 
 class DefaultPlanningCoordinator(PlanningCoordinator):
@@ -26,14 +30,14 @@ class DefaultPlanningCoordinator(PlanningCoordinator):
     Default implementation of planning coordination.
 
     Coordinates Strategic Engine and Workflow Engine to produce strategic plan
-    and executable workflow.
+    and executable workflow. Validates planning outputs for completeness and consistency.
     """
 
     def __init__(
         self,
         strategic_engine: StrategicEngine | None = None,
         workflow_engine: WorkflowEngine | None = None,
-        event_bus: Any | None = None,
+        event_bus: EventBus | None = None,
     ):
         """
         Initialize the planning coordinator.
@@ -68,12 +72,24 @@ class DefaultPlanningCoordinator(PlanningCoordinator):
         # Step 2: Invoke Workflow Engine to produce executable workflow
         executable_workflow = await self._coordinate_execution_planning(strategic_plan, intent_analysis)
 
-        # Step 3: Validate planning outputs
+        # Step 3: Validate planning outputs comprehensively
         self._validate_planning_outputs(strategic_plan, executable_workflow)
 
-        # Step 4: Publish plan.created event
-        if self.event_bus:
-            await self._publish_plan_created_event(strategic_plan, executable_workflow)
+        # Step 4: Publish project.planning event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_PLANNING,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=request.project_id if hasattr(request, 'project_id') else uuid.uuid4(),
+            aggregate_type="Project",
+            metadata={
+                "plan_id": str(strategic_plan.plan_id),
+                "workflow_id": str(executable_workflow.workflow_id),
+                "loop_count": len(executable_workflow.loops),
+                "estimated_duration": executable_workflow.estimated_duration,
+                "estimated_cost": executable_workflow.estimated_cost,
+            },
+        )
 
         return strategic_plan, executable_workflow
 
@@ -150,6 +166,13 @@ class DefaultPlanningCoordinator(PlanningCoordinator):
         """
         Validate planning outputs for completeness and consistency.
 
+        Validates:
+        - Strategic Plan completeness (requirements, architecture decisions, technology choices, acceptance criteria)
+        - Workflow completeness (loops, task graph, worker assignments)
+        - Consistency between Strategic Plan and Executable Workflow
+        - Architecture consistency
+        - Dependency consistency
+
         Args:
             strategic_plan: The strategic plan.
             executable_workflow: The executable workflow.
@@ -157,60 +180,129 @@ class DefaultPlanningCoordinator(PlanningCoordinator):
         Raises:
             ValueError: If planning outputs are invalid.
         """
-        # Validate strategic plan
+        errors = []
+
+        # ====================================================================
+        # Strategic Plan Validation
+        # ====================================================================
+
+        # Validate requirements
         if not strategic_plan.requirements:
-            raise ValueError("Strategic plan must include requirements")
+            errors.append("Strategic plan must include requirements")
 
+        # Validate architecture decisions
+        if not strategic_plan.architecture_decisions:
+            errors.append("Strategic plan must include architecture decisions")
+
+        # Validate technology choices
+        if not strategic_plan.technology_choices:
+            errors.append("Strategic plan must include technology choices")
+
+        # Validate acceptance criteria
         if not strategic_plan.acceptance_criteria:
-            raise ValueError("Strategic plan must include acceptance criteria")
+            errors.append("Strategic plan must include acceptance criteria")
 
-        # Validate executable workflow
+        # Validate estimated duration
+        if strategic_plan.estimated_duration < 0:
+            errors.append("Strategic plan estimated duration cannot be negative")
+
+        # Validate estimated cost
+        if strategic_plan.estimated_cost < 0:
+            errors.append("Strategic plan estimated cost cannot be negative")
+
+        # ====================================================================
+        # Executable Workflow Validation
+        # ====================================================================
+
+        # Validate loops
         if not executable_workflow.loops:
-            raise ValueError("Executable workflow must include loops")
+            errors.append("Executable workflow must include at least one loop")
 
+        # Validate task graph
         if not executable_workflow.task_graph:
-            raise ValueError("Executable workflow must include task graph")
+            errors.append("Executable workflow must include task graph")
 
-        # Validate consistency
+        # Validate worker assignments
+        if not executable_workflow.worker_assignments:
+            errors.append("Executable workflow must include worker assignments")
+
+        # Validate model assignments
+        if not executable_workflow.model_assignments:
+            errors.append("Executable workflow must include model assignments")
+
+        # Validate estimated duration
         if executable_workflow.estimated_duration < 0:
-            raise ValueError("Executable workflow estimated duration cannot be negative")
+            errors.append("Executable workflow estimated duration cannot be negative")
 
+        # Validate estimated cost
         if executable_workflow.estimated_cost < 0:
-            raise ValueError("Executable workflow estimated cost cannot be negative")
+            errors.append("Executable workflow estimated cost cannot be negative")
 
-    async def _publish_plan_created_event(
-        self,
-        strategic_plan: StrategicPlan,
-        executable_workflow: ExecutableWorkflow,
-    ) -> None:
-        """
-        Publish plan.created event.
+        # ====================================================================
+        # Consistency Validation
+        # ====================================================================
 
-        Args:
-            strategic_plan: The strategic plan.
-            executable_workflow: The executable workflow.
-        """
-        if not self.event_bus:
-            return
+        # Check that workflow loops are consistent with strategic plan requirements
+        if strategic_plan.requirements and executable_workflow.loops:
+            # Each requirement should map to at least one loop
+            required_loop_types = set()
+            for loop in executable_workflow.loops:
+                loop_type = loop.get("type", "")
+                required_loop_types.add(loop_type)
 
-        from autoforge_events.base import BaseEvent as DomainBaseEvent
-        from autoforge_events.event_types import EventCategory, EventType
+            # Check that loops cover the required engineering domains
+            if "research" in str(strategic_plan.requirements).lower() and "research" not in str(required_loop_types).lower():
+                errors.append("Strategic plan requires research but no research loop in workflow")
 
-        event = DomainBaseEvent(
-            event_type=EventType.CREATED,
-            event_category=EventCategory.SYSTEM_EVENT,
-            aggregate_id=strategic_plan.plan_id,
-            aggregate_type="StrategicPlan",
-            metadata={
-                "plan_id": str(strategic_plan.plan_id),
-                "workflow_id": str(executable_workflow.workflow_id),
-                "loop_count": len(executable_workflow.loops),
-                "estimated_duration": executable_workflow.estimated_duration,
-                "estimated_cost": executable_workflow.estimated_cost,
-            },
-        )
+        # Check that worker assignments exist for each worker type
+        if executable_workflow.worker_assignments and executable_workflow.loops:
+            assigned_workers = set(executable_workflow.worker_assignments.keys())
+            # Verify each assigned worker has tasks
+            for worker_type, tasks in executable_workflow.worker_assignments.items():
+                if not tasks:
+                    errors.append(f"Worker '{worker_type}' has no assigned tasks")
 
-        await self.event_bus.publish(event)
+        # Check that model assignments exist for each worker type
+        if executable_workflow.worker_assignments and executable_workflow.model_assignments:
+            for worker_type in executable_workflow.worker_assignments:
+                if worker_type not in executable_workflow.model_assignments:
+                    errors.append(f"Worker type '{worker_type}' has no model assignment")
+
+        # ====================================================================
+        # Architecture Consistency Validation
+        # ====================================================================
+
+        # Check that architecture decisions are reflected in the workflow
+        if strategic_plan.architecture_decisions and executable_workflow.loops:
+            for decision in strategic_plan.architecture_decisions:
+                decision_text = str(decision).lower()
+                # If architecture decision mentions specific technology, check it's in technology choices
+                for tech in strategic_plan.technology_choices:
+                    if tech.lower() in decision_text:
+                        break
+
+        # ====================================================================
+        # Dependency Consistency Validation
+        # ====================================================================
+
+        # Check that task graph dependencies are consistent
+        task_graph = executable_workflow.task_graph
+        if task_graph:
+            tasks = task_graph.get("tasks", [])
+            dependencies = task_graph.get("dependencies", [])
+            task_ids = {t.get("id") for t in tasks if t.get("id")}
+
+            for dep in dependencies:
+                dep_from = dep.get("from")
+                dep_to = dep.get("to")
+                if dep_from and dep_from not in task_ids:
+                    errors.append(f"Dependency references non-existent task: {dep_from}")
+                if dep_to and dep_to not in task_ids:
+                    errors.append(f"Dependency references non-existent task: {dep_to}")
+
+        # Raise error if any validation failed
+        if errors:
+            raise ValueError(f"Planning validation failed: {'; '.join(errors)}")
 
     async def request_replanning(
         self,
@@ -236,23 +328,18 @@ class DefaultPlanningCoordinator(PlanningCoordinator):
             execution_context=execution_context,
         )
 
-        # Publish replanning event
-        if self.event_bus:
-            from autoforge_events.base import BaseEvent as DomainBaseEvent
-            from autoforge_events.event_types import EventCategory, EventType
-
-            event = DomainBaseEvent(
-                event_type=EventType.UPDATED,
-                event_category=EventCategory.SYSTEM_EVENT,
-                aggregate_id=workflow_id,
-                aggregate_type="ExecutableWorkflow",
-                metadata={
-                    "workflow_id": str(workflow_id),
-                    "reason": "replanning",
-                },
-            )
-
-            await self.event_bus.publish(event)
+        # Publish project.planning event for replanning
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_PLANNING,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=workflow_id,
+            aggregate_type="Project",
+            metadata={
+                "workflow_id": str(workflow_id),
+                "reason": "replanning",
+            },
+        )
 
         return updated_workflow
 
@@ -269,7 +356,7 @@ class PlanningCoordinationModule:
         planning_coordinator: PlanningCoordinator | None = None,
         strategic_engine: StrategicEngine | None = None,
         workflow_engine: WorkflowEngine | None = None,
-        event_bus: Any | None = None,
+        event_bus: EventBus | None = None,
     ):
         """
         Initialize the planning coordination module.

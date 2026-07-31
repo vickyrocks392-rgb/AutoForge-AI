@@ -20,6 +20,8 @@ from autoforge_kernel.interfaces import (
     RuntimeStateManager,
     ExecutionContinuityManager,
 )
+from autoforge_events.event_types import EventCategory, EventType
+from autoforge_kernel.event_utils import publish_event, make_timestamp
 
 
 class KernelRuntimeStatus(str, Enum):
@@ -29,13 +31,15 @@ class KernelRuntimeStatus(str, Enum):
     STARTING = "starting"
     READY = "ready"
     PROCESSING = "processing"
+    PAUSING = "pausing"
     PAUSED = "paused"
+    RESUMING = "resuming"
     STOPPING = "stopping"
     STOPPED = "stopped"
 
 
 class ProjectStatus(str, Enum):
-    """Project status."""
+    """Project status matching the Kernel Specification v1.0 Section 10.1."""
 
     CREATED = "created"
     PLANNING = "planning"
@@ -59,6 +63,7 @@ class DefaultRuntimeLifecycleManager(RuntimeLifecycleManager):
         self,
         event_bus: EventBus | None = None,
         runtime_state_manager: RuntimeStateManager | None = None,
+        kernel_id: uuid.UUID | None = None,
     ):
         """
         Initialize the runtime lifecycle manager.
@@ -66,9 +71,11 @@ class DefaultRuntimeLifecycleManager(RuntimeLifecycleManager):
         Args:
             event_bus: Event bus for publishing events.
             runtime_state_manager: Runtime state manager.
+            kernel_id: Optional kernel ID (generates new one if not provided).
         """
         self.event_bus = event_bus
         self.runtime_state_manager = runtime_state_manager
+        self.kernel_id = kernel_id or uuid.uuid4()
         self.status = KernelRuntimeStatus.CREATED
         self.started_at: datetime | None = None
         self.active_project_count = 0
@@ -79,31 +86,31 @@ class DefaultRuntimeLifecycleManager(RuntimeLifecycleManager):
         self.started_at = datetime.now(timezone.utc)
 
         # Publish kernel.starting event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="started",
-                event_category="system_event",
-                aggregate_id=uuid.uuid4(),  # Kernel ID
-                aggregate_type="Kernel",
-                metadata={"version": "0.1.0"},
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.KERNEL_STARTING,
+            event_category=EventCategory.SYSTEM_EVENT,
+            aggregate_id=self.kernel_id,
+            aggregate_type="Kernel",
+            metadata={"version": "0.1.0"},
+        )
 
     async def start(self) -> None:
         """Start the runtime."""
         self.status = KernelRuntimeStatus.READY
 
         # Publish kernel.started event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="started",
-                event_category="system_event",
-                aggregate_id=uuid.uuid4(),  # Kernel ID
-                aggregate_type="Kernel",
-                metadata={
-                    "version": "0.1.0",
-                    "active_project_count": self.active_project_count,
-                },
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.KERNEL_STARTED,
+            event_category=EventCategory.SYSTEM_EVENT,
+            aggregate_id=self.kernel_id,
+            aggregate_type="Kernel",
+            metadata={
+                "version": "0.1.0",
+                "active_project_count": self.active_project_count,
+            },
+        )
 
     async def pause(self, reason: str) -> None:
         """
@@ -112,30 +119,53 @@ class DefaultRuntimeLifecycleManager(RuntimeLifecycleManager):
         Args:
             reason: Reason for pausing.
         """
+        self.status = KernelRuntimeStatus.PAUSING
+
+        # Publish kernel.pausing event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.KERNEL_PAUSING,
+            event_category=EventCategory.SYSTEM_EVENT,
+            aggregate_id=self.kernel_id,
+            aggregate_type="Kernel",
+            metadata={"reason": reason},
+        )
+
         self.status = KernelRuntimeStatus.PAUSED
 
         # Publish kernel.paused event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="paused",
-                event_category="system_event",
-                aggregate_id=uuid.uuid4(),  # Kernel ID
-                aggregate_type="Kernel",
-                metadata={"reason": reason},
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.KERNEL_PAUSED,
+            event_category=EventCategory.SYSTEM_EVENT,
+            aggregate_id=self.kernel_id,
+            aggregate_type="Kernel",
+            metadata={"reason": reason},
+        )
 
     async def resume(self) -> None:
         """Resume the runtime."""
+        self.status = KernelRuntimeStatus.RESUMING
+
+        # Publish kernel.resuming event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.KERNEL_RESUMING,
+            event_category=EventCategory.SYSTEM_EVENT,
+            aggregate_id=self.kernel_id,
+            aggregate_type="Kernel",
+        )
+
         self.status = KernelRuntimeStatus.READY
 
-        # Publish kernel.resumed event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="resumed",
-                event_category="system_event",
-                aggregate_id=uuid.uuid4(),  # Kernel ID
-                aggregate_type="Kernel",
-            )
+        # Publish kernel.ready event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.KERNEL_READY,
+            event_category=EventCategory.SYSTEM_EVENT,
+            aggregate_id=self.kernel_id,
+            aggregate_type="Kernel",
+        )
 
     async def shutdown(self, reason: str) -> None:
         """
@@ -147,65 +177,30 @@ class DefaultRuntimeLifecycleManager(RuntimeLifecycleManager):
         self.status = KernelRuntimeStatus.STOPPING
 
         # Publish kernel.stopping event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="cancelled",
-                event_category="system_event",
-                aggregate_id=uuid.uuid4(),  # Kernel ID
-                aggregate_type="Kernel",
-                metadata={"reason": reason},
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.KERNEL_STOPPING,
+            event_category=EventCategory.SYSTEM_EVENT,
+            aggregate_id=self.kernel_id,
+            aggregate_type="Kernel",
+            metadata={"reason": reason},
+        )
 
         self.status = KernelRuntimeStatus.STOPPED
+
+        # Publish kernel.stopped event
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.KERNEL_STOPPED,
+            event_category=EventCategory.SYSTEM_EVENT,
+            aggregate_id=self.kernel_id,
+            aggregate_type="Kernel",
+            metadata={"reason": reason},
+        )
 
     def get_status(self) -> str:
         """Get the current runtime status."""
         return self.status.value
-
-    async def _publish_event(
-        self,
-        event_type: str,
-        event_category: str,
-        aggregate_id: uuid.UUID,
-        aggregate_type: str,
-        metadata: dict[str, Any] | None = None,
-    ) -> None:
-        """
-        Publish an event.
-
-        Args:
-            event_type: The event type.
-            event_category: The event category.
-            aggregate_id: The aggregate ID.
-            aggregate_type: The aggregate type.
-            metadata: Optional metadata.
-        """
-        if not self.event_bus:
-            return
-
-        from autoforge_events.base import BaseEvent as DomainBaseEvent
-        from autoforge_events.event_types import EventCategory, EventType
-
-        # Map string to enum
-        try:
-            evt_type = EventType[event_type.upper()]
-        except KeyError:
-            evt_type = EventType.SYSTEM_EVENT
-
-        try:
-            evt_category = EventCategory[event_category.upper()]
-        except KeyError:
-            evt_category = EventCategory.SYSTEM_EVENT
-
-        event = DomainBaseEvent(
-            event_type=evt_type,
-            event_category=evt_category,
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            metadata=metadata or {},
-        )
-
-        await self.event_bus.publish(event)
 
 
 class DefaultProjectLifecycleManager(ProjectLifecycleManager):
@@ -244,13 +239,13 @@ class DefaultProjectLifecycleManager(ProjectLifecycleManager):
         await self.transition_project_status(project_id, ProjectStatus.RUNNING)
 
         # Publish project.running event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="started",
-                event_category="project",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_RUNNING,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+        )
 
     async def pause_project(self, project_id: uuid.UUID, reason: str) -> None:
         """
@@ -273,14 +268,14 @@ class DefaultProjectLifecycleManager(ProjectLifecycleManager):
         await self.transition_project_status(project_id, ProjectStatus.PAUSED)
 
         # Publish project.paused event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="paused",
-                event_category="project",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-                metadata={"reason": reason},
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_PAUSED,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"reason": reason},
+        )
 
     async def resume_project(self, project_id: uuid.UUID) -> None:
         """
@@ -292,13 +287,13 @@ class DefaultProjectLifecycleManager(ProjectLifecycleManager):
         await self.transition_project_status(project_id, ProjectStatus.RUNNING)
 
         # Publish project.resumed event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="resumed",
-                event_category="project",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_RESUMED,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+        )
 
     async def cancel_project(self, project_id: uuid.UUID, reason: str) -> None:
         """
@@ -311,14 +306,14 @@ class DefaultProjectLifecycleManager(ProjectLifecycleManager):
         await self.transition_project_status(project_id, ProjectStatus.CANCELLED)
 
         # Publish project.cancelled event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="cancelled",
-                event_category="project",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-                metadata={"reason": reason},
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_CANCELLED,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"reason": reason},
+        )
 
     async def complete_project(self, project_id: uuid.UUID) -> None:
         """
@@ -330,13 +325,13 @@ class DefaultProjectLifecycleManager(ProjectLifecycleManager):
         await self.transition_project_status(project_id, ProjectStatus.COMPLETING)
 
         # Publish project.completing event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="completed",
-                event_category="project",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_COMPLETING,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+        )
 
     async def fail_project(self, project_id: uuid.UUID, error: str) -> None:
         """
@@ -349,14 +344,14 @@ class DefaultProjectLifecycleManager(ProjectLifecycleManager):
         await self.transition_project_status(project_id, ProjectStatus.FAILED)
 
         # Publish project.failed event
-        if self.event_bus:
-            await self._publish_event(
-                event_type="failed",
-                event_category="project",
-                aggregate_id=project_id,
-                aggregate_type="Project",
-                metadata={"error": error},
-            )
+        await publish_event(
+            event_bus=self.event_bus,
+            event_type=EventType.PROJECT_FAILED,
+            event_category=EventCategory.PROJECT,
+            aggregate_id=project_id,
+            aggregate_type="Project",
+            metadata={"error": error},
+        )
 
     def get_project_status(self, project_id: uuid.UUID) -> str:
         """
@@ -406,7 +401,7 @@ class DefaultProjectLifecycleManager(ProjectLifecycleManager):
         new_status: ProjectStatus,
     ) -> bool:
         """
-        Check if a status transition is valid.
+        Check if a status transition is valid per Kernel Specification v1.0 Section 10.3.
 
         Args:
             current_status: The current status.
@@ -419,10 +414,17 @@ class DefaultProjectLifecycleManager(ProjectLifecycleManager):
         if current_status in [ProjectStatus.FINISHED, ProjectStatus.FAILED, ProjectStatus.CANCELLED]:
             return False
 
-        # Valid transitions
+        # Valid transitions per specification Section 10.2 and 10.3:
+        # Created -> Planning, Cancelled
+        # Planning -> Running, Failed, Cancelled
+        # Running -> Reviewing, Paused, Completing, Failed, Cancelled
+        # Reviewing -> Running, Paused, Failed, Cancelled
+        # Paused -> Running, Cancelled
+        # Completing -> Finished, Failed
+        # Finished, Failed, Cancelled -> (terminal)
         valid_transitions = {
-            None: [ProjectStatus.PLANNING, ProjectStatus.RUNNING, ProjectStatus.CANCELLED],
-            ProjectStatus.CREATED: [ProjectStatus.PLANNING, ProjectStatus.RUNNING, ProjectStatus.CANCELLED],
+            None: [ProjectStatus.PLANNING, ProjectStatus.CANCELLED],
+            ProjectStatus.CREATED: [ProjectStatus.PLANNING, ProjectStatus.CANCELLED],
             ProjectStatus.PLANNING: [ProjectStatus.RUNNING, ProjectStatus.FAILED, ProjectStatus.CANCELLED],
             ProjectStatus.RUNNING: [
                 ProjectStatus.REVIEWING,
@@ -443,51 +445,6 @@ class DefaultProjectLifecycleManager(ProjectLifecycleManager):
 
         allowed_transitions = valid_transitions.get(current_status, [])
         return new_status in allowed_transitions
-
-    async def _publish_event(
-        self,
-        event_type: str,
-        event_category: str,
-        aggregate_id: uuid.UUID,
-        aggregate_type: str,
-        metadata: dict[str, Any] | None = None,
-    ) -> None:
-        """
-        Publish an event.
-
-        Args:
-            event_type: The event type.
-            event_category: The event category.
-            aggregate_id: The aggregate ID.
-            aggregate_type: The aggregate type.
-            metadata: Optional metadata.
-        """
-        if not self.event_bus:
-            return
-
-        from autoforge_events.base import BaseEvent as DomainBaseEvent
-        from autoforge_events.event_types import EventCategory, EventType
-
-        # Map string to enum
-        try:
-            evt_type = EventType[event_type.upper()]
-        except KeyError:
-            evt_type = EventType.SYSTEM_EVENT
-
-        try:
-            evt_category = EventCategory[event_category.upper()]
-        except KeyError:
-            evt_category = EventCategory.SYSTEM_EVENT
-
-        event = DomainBaseEvent(
-            event_type=evt_type,
-            event_category=evt_category,
-            aggregate_id=aggregate_id,
-            aggregate_type=aggregate_type,
-            metadata=metadata or {},
-        )
-
-        await self.event_bus.publish(event)
 
 
 class DefaultLifecycleCoordinator(LifecycleCoordinator):
@@ -576,6 +533,8 @@ class LifecycleCoordinationModule:
         lifecycle_coordinator: LifecycleCoordinator | None = None,
         runtime_lifecycle_manager: RuntimeLifecycleManager | None = None,
         project_lifecycle_manager: ProjectLifecycleManager | None = None,
+        event_bus: EventBus | None = None,
+        kernel_id: uuid.UUID | None = None,
     ):
         """
         Initialize the lifecycle coordination module.
@@ -584,9 +543,15 @@ class LifecycleCoordinationModule:
             lifecycle_coordinator: Lifecycle coordinator.
             runtime_lifecycle_manager: Runtime lifecycle manager.
             project_lifecycle_manager: Project lifecycle manager.
+            event_bus: Event bus for publishing events.
+            kernel_id: Optional kernel ID.
         """
         self.lifecycle_coordinator = lifecycle_coordinator or DefaultLifecycleCoordinator(
-            runtime_lifecycle_manager=runtime_lifecycle_manager,
+            runtime_lifecycle_manager=runtime_lifecycle_manager or DefaultRuntimeLifecycleManager(
+                event_bus=event_bus,
+                runtime_state_manager=None,
+                kernel_id=kernel_id,
+            ),
             project_lifecycle_manager=project_lifecycle_manager,
         )
 
