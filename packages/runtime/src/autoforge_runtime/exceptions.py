@@ -67,3 +67,85 @@ class DuplicateEntityError(RuntimeError):
         - Registering a Project with an ID that is already in use
         - Registering a Task with a duplicate ID
     """
+
+
+class VersionConflictError(RuntimeError):
+    """
+    Raised when a state version conflict is detected (optimistic concurrency).
+
+    Examples:
+        - Two components attempt to update the same state with different versions
+        - A transition is attempted with a stale version number
+    """
+
+
+class ValidationError(RuntimeError):
+    """
+    Raised when state data fails validation.
+
+    Examples:
+        - Project data is invalid
+        - Required metadata is missing
+    """
+
+
+class PersistenceError(RuntimeError):
+    """
+    Raised when state cannot be persisted to durable storage.
+
+    Examples:
+        - Database write failure
+        - Cache update failure
+    """
+
+
+class InvalidStateError(RuntimeError):
+    """
+    Raised when an entity is in an invalid state for an operation.
+
+    Examples:
+        - Attempting to restore a checkpoint that is not restorable
+        - Attempting to transition from an invalid state
+    """
+
+
+class InvalidEntityTypeError(RuntimeError):
+    """
+    Raised when an invalid entity type is provided.
+
+    Examples:
+        - Subscribing to an unknown entity type
+        - Querying an unknown entity type
+    """
+
+
+class CheckpointError(RuntimeError):
+    """
+    Raised when a checkpoint operation fails.
+
+    Examples:
+        - Checkpoint cannot be created
+        - Checkpoint cannot be restored
+        - Checkpoint integrity validation fails
+    """
+
+
+class RecoveryError(RuntimeError):
+    """
+    Raised when a recovery operation fails.
+
+    Examples:
+        - State cannot be restored from checkpoint
+        - State reconstruction from events fails
+    """
+
+
+class LifecycleError(RuntimeError):
+    """
+    Raised when a runtime lifecycle operation fails.
+
+    Examples:
+        - Runtime cannot be started
+        - Runtime cannot be stopped
+        - Runtime is in an invalid state for the operation
+    """
